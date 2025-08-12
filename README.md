@@ -1,4 +1,4 @@
-# 🛳️ cargohold — Reserve Your Crate Namespace on crates.io
+# 🛳️ cargohold — Stub a crate on crates.io
 
 **cargohold** is a small but mighty Bash script to **secure a crate name** on [crates.io](https://crates.io) before someone else grabs it.
 
