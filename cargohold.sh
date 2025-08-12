@@ -1,32 +1,25 @@
 #!/usr/bin/env bash
-# cargohold.sh — crates.io namespace + repo-aware stub (with --dir + confirm + --yes)
-# NOTE: Do not spam crates.io with empty repos you dont intend on building!
-# Bash 3.2+ compatible
-
 set -euo pipefail
 
 # ==================== USER DEFAULTS ==================== #
-DEFAULT_GITHUB_NAME="YourGitHubUsernameOrOrg"     # override with --name
-DEFAULT_SSH_IDENTITY="${SSH_IDENTITY:-github.com}"# e.g., github or github.com
+DEFAULT_GITHUB_NAME="YourGitHubUsernameOrOrg"
+DEFAULT_SSH_IDENTITY="${SSH_IDENTITY:-github.com}"
 DEFAULT_DESC="Reserved name stub crate. No functionality is provided."
 DEFAULT_KEYWORDS="stub,reserved"
-DEFAULT_CRATE_TYPE="lib"        # lib|bin
+DEFAULT_CRATE_TYPE="lib"
 DEFAULT_LICENSE="MIT OR Apache-2.0"
 DEFAULT_VERSION="0.0.1"
+PLEDGE_FILE="${HOME}/.cargohold"
 # ======================================================= #
 
 die(){ echo "ERR: $*" >&2; exit 1; }
-
 valid_crate_name(){
-  case "$1" in
-    *[A-Z]*|*[^a-z0-9_-]*|"") return 1;;
-  esac
+  case "$1" in *[A-Z]*|*[^a-z0-9_-]*|"") return 1;; esac
   [ ${#1} -le 64 ] || return 1
   [[ "$1" =~ ^[a-z0-9][a-z0-9_-]*$ ]] || return 1
   [[ "$1" =~ [a-z] ]] || return 1
   return 0
 }
-
 keywords_literal(){
   printf '%s' "$1" | awk -F',' '{
     out=""; for (i=1;i<=NF;i++){ gsub(/^ +| +$/,"",$i);
@@ -34,25 +27,17 @@ keywords_literal(){
     } print out
   }'
 }
-
 truncate80(){
   local s="$1"; local n=${#s}
   if [ $n -le 80 ]; then printf "%s" "$s"; else printf "%s…" "$(printf "%s" "$s" | cut -c1-80)"; fi
 }
 
 # --------- defaults ---------
-CRATE_NAME=""
-WORKDIR=""
-CRATE_TYPE="$DEFAULT_CRATE_TYPE"
-VERSION="$DEFAULT_VERSION"
-DESC="$DEFAULT_DESC"
-KEYWORDS="$DEFAULT_KEYWORDS"
-NAME="$DEFAULT_GITHUB_NAME"
-REPO_NAME=""
-SSH_ID="$DEFAULT_SSH_IDENTITY"
-HOMEPAGE=""
-PUBLISH="yes"
-AUTO_YES="no"
+CRATE_NAME=""; WORKDIR=""
+CRATE_TYPE="$DEFAULT_CRATE_TYPE"; VERSION="$DEFAULT_VERSION"
+DESC="$DEFAULT_DESC"; KEYWORDS="$DEFAULT_KEYWORDS"
+NAME="$DEFAULT_GITHUB_NAME"; REPO_NAME=""; SSH_ID="$DEFAULT_SSH_IDENTITY"
+HOMEPAGE=""; PUBLISH="yes"; AUTO_YES="no"; QUIET_NOTICE="no"
 
 usage(){
   cat <<USAGE
@@ -68,14 +53,13 @@ Usage: $0 <crate-name>
        [--homepage URL]
        [--no-publish]
        [--yes]
+       [--qn]
 USAGE
   exit 1
 }
 
-# --------- parse ---------
 [ $# -ge 1 ] || usage
 CRATE_NAME="$1"; shift
-
 while [ $# -gt 0 ]; do
   case "$1" in
     --dir) WORKDIR="${2:?}"; shift 2;;
@@ -90,32 +74,63 @@ while [ $# -gt 0 ]; do
     --homepage) HOMEPAGE="${2:?}"; shift 2;;
     --no-publish) PUBLISH="no"; shift;;
     --yes) AUTO_YES="yes"; shift;;
+    --qn) QUIET_NOTICE="yes"; shift;;
     -h|--help) usage;;
     *) die "Unknown arg: $1";;
   esac
 done
 
-# --------- validations ---------
 command -v cargo >/dev/null 2>&1 || die "cargo not found"
 valid_crate_name "$CRATE_NAME" || die "invalid crate name '$CRATE_NAME'"
 [ -n "$NAME" ] || die "--name required or set DEFAULT_GITHUB_NAME"
 [ "$NAME" != "YourGitHubUsernameOrOrg" ] || die "set --name or DEFAULT_GITHUB_NAME"
-
-if [ -n "$REPO_NAME" ]; then
-  case "$REPO_NAME" in *[\\/:]*|"") die "invalid --repo" ;; esac
-fi
-
+if [ -n "$REPO_NAME" ]; then case "$REPO_NAME" in *[\\/:]*|"") die "invalid --repo" ;; esac; fi
 [ -n "$WORKDIR" ] || WORKDIR="$CRATE_NAME"
 [ ! -e "$WORKDIR" ] || die "directory '$WORKDIR' already exists"
 
-# Build URLs if repo provided
 REPO_HTTPS=""; REMOTE_SSH=""
 if [ -n "$REPO_NAME" ]; then
   REPO_HTTPS="https://github.com/${NAME}/${REPO_NAME}"
   REMOTE_SSH="git@${SSH_ID}:${NAME}/${REPO_NAME}.git"
 fi
 
-# --------- pre-flight summary ---------
+if [ ! -f "$PLEDGE_FILE" ] && [ "$QUIET_NOTICE" != "yes" ]; then
+  printf "\033[1;36m"
+  cat <<'BANNER'
+   ___ __ _ _ __ __ _  ___  
+  / __/ _` | '__/ _` |/ _ \ 
+ | (_| (_| | | | (_| | (_) |
+  \___\__,_|_|  \__, |\___/ 
+  _           _ |___/       
+ | |__   ___ | | __| |      
+ | '_ \ / _ \| |/ _` |      
+ | | | | (_) | | (_| |      
+ |_| |_|\___/|_|\__,_|      
+BANNER
+  printf "\033[0m\n"
+
+  printf "\033[1;33m⚠️  CRATES.IO USAGE PLEDGE\033[0m\n"
+  echo
+  echo "By continuing, you agree:"
+  echo "  • Not to spam crates.io with useless or throwaway crates."
+  echo "  • To commit to building your crate into a usable public project,"
+  echo "    OR mark it as transferable if you no longer intend to maintain it."
+  echo "  • If this is an experiment, test, or school project — do NOT publish"
+  echo "    it as a crate. Use local crates or workspaces instead."
+  echo "  • crates.io is for public-use libraries, tools, and applications —"
+  echo "    not for one-off, undocumented code dumps."
+  echo
+  printf "Type 'I AGREE' to continue: "
+  read agree || true
+  if [ "$agree" != "I AGREE" ]; then
+    echo "Aborted."
+    exit 0
+  fi
+  touch "$PLEDGE_FILE"
+elif [ "$QUIET_NOTICE" = "yes" ]; then
+  touch "$PLEDGE_FILE"
+fi
+
 echo "Plan:"
 printf "  Crate:        %s\n" "$CRATE_NAME"
 printf "  Directory:    %s\n" "$WORKDIR"
@@ -135,7 +150,6 @@ printf "  Homepage:     %s\n" "${HOMEPAGE:-(none)}"
 printf "  Publish:      %s\n" "$PUBLISH"
 echo
 
-# --------- confirmation ---------
 if [ "$AUTO_YES" != "yes" ]; then
   printf "Proceed with creation? [y/N]: "
   read ans || true
@@ -146,13 +160,11 @@ if [ "$AUTO_YES" != "yes" ]; then
   fi
 fi
 
-# --------- scaffold ---------
 cargo init "$WORKDIR" ${CRATE_TYPE:+--$CRATE_TYPE} >/dev/null
 cd "$WORKDIR"
 
 KEYS_LITERAL="$(keywords_literal "$KEYWORDS")"
 
-# Cargo.toml
 {
   echo "[package]"
   echo "name = \"${CRATE_NAME}\""
@@ -171,7 +183,6 @@ KEYS_LITERAL="$(keywords_literal "$KEYWORDS")"
   fi
 } > Cargo.toml
 
-# README
 {
   echo "# ${CRATE_NAME}"
   echo
@@ -179,17 +190,13 @@ KEYS_LITERAL="$(keywords_literal "$KEYWORDS")"
   [ -n "$REPO_HTTPS" ] && echo "- Repository: ${REPO_HTTPS}"
 } > README.md
 
-# licenses
 cat > LICENSE-MIT <<'EOF'
 MIT License
-Copyright (c)
-Permission is hereby granted...
 EOF
 cat > LICENSE-APACHE <<'EOF'
-Apache License 2.0 — http://www.apache.org/licenses/LICENSE-2.0
+Apache License 2.0
 EOF
 
-# src
 mkdir -p src
 if [ "$CRATE_TYPE" = "lib" ]; then
   cat > src/lib.rs <<'EOF'
@@ -197,7 +204,6 @@ if [ "$CRATE_TYPE" = "lib" ]; then
 #![forbid(unsafe_code)]
 #![deny(warnings)]
 #![allow(dead_code)]
-
 #[deprecated(note = "This crate name is reserved. It intentionally provides no functionality.")]
 pub const _RESERVED_STUB: &str = env!("CARGO_PKG_NAME");
 EOF
@@ -209,11 +215,11 @@ fn main() {
 EOF
 fi
 
-# git
 cat > .gitignore <<'EOF'
 /target
 Cargo.lock
 EOF
+
 git init -q
 git add .
 git commit -q -m "chore: reserve crate stub ${CRATE_NAME}"
@@ -235,7 +241,6 @@ else
   echo "No --repo provided; skipped remote setup."
 fi
 
-# publish
 if [ "$PUBLISH" = "yes" ]; then
   cargo package >/dev/null
   cargo publish
