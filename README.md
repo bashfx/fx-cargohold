@@ -1,4 +1,4 @@
-# 🛳️ cargohold — Stub a crate on crates.io
+# 🛳️ cargohold : Stub a crate on crates.io
 
 **cargohold** is a small but mighty Bash script to **secure a crate name** on [crates.io](https://crates.io) before someone else grabs it.
 
@@ -19,7 +19,7 @@ It creates a **minimal stub crate** with:
 ---
 
 ## ⚠️ **Important Warning**
-crates.io is a shared resource — **do not spam** it with dozens of useless crates you never plan to build.  
+crates.io is a shared resource: **do not spam** it with dozens of useless crates you never plan to build.  
 If you reserve a name, either:
 1. Build something real, **or**
 2. Clearly mark it as available for transfer.
