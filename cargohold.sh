@@ -46,6 +46,37 @@ hr(){
   printf "%s\n" "$(printf '%*s' "$cols" '' | tr ' ' '─')"
 }
 
+clear_screen(){
+  # clear screen
+  printf '\033[2J\033[H'
+}
+
+print_banner(){
+  printf "%s" "$CLR_CYAN_B"
+  cat <<'BANNER'
+
+
+ ______     ______     ______     ______     ______    
+/\  ___\   /\  __ \   /\  == \   /\  ___\   /\  __ \   
+\ \ \____  \ \  __ \  \ \  __<   \ \ \__ \  \ \ \/\ \  
+ \ \_____\  \ \_\ \_\  \ \_\ \_\  \ \_____\  \ \_____\ 
+  \/_____/   \/_/\/_/   \/_/ /_/   \/_____/   \/_____/ 
+                                                       
+ __  __     ______     __         _____                
+/\ \_\ \   /\  __ \   /\ \       /\  __-.              
+\ \  __ \  \ \ \/\ \  \ \ \____  \ \ \/\ \             
+ \ \_\ \_\  \ \_____\  \ \_____\  \ \____-             
+  \/_/\/_/   \/_____/   \/_____/   \/____/             
+
+Qodeninja (c) 2025 for BashFX. MIT License.        
+
+
+BANNER
+  printf "%s" "$CLR_RESET"
+}
+
+
+
 # --------- defaults ---------
 CRATE_NAME=""; WORKDIR=""
 CRATE_TYPE="$DEFAULT_CRATE_TYPE"; VERSION="$DEFAULT_VERSION"
@@ -108,27 +139,11 @@ if [ -n "$REPO_NAME" ]; then
   REMOTE_SSH="git@${SSH_ID}:${NAME}/${REPO_NAME}.git"
 fi
 
+clear_screen;
+print_banner;
+
 # ----- banner + pledge (persisted; --qn bypass) -----
 if [ ! -f "$PLEDGE_FILE" ] && [ "$QUIET_NOTICE" != "yes" ]; then
-  printf "%s" "$CLR_CYAN_B"
-  cat <<'BANNER'
-
- ______     ______     ______     ______     ______    
-/\  ___\   /\  __ \   /\  == \   /\  ___\   /\  __ \   
-\ \ \____  \ \  __ \  \ \  __<   \ \ \__ \  \ \ \/\ \  
- \ \_____\  \ \_\ \_\  \ \_\ \_\  \ \_____\  \ \_____\ 
-  \/_____/   \/_/\/_/   \/_/ /_/   \/_____/   \/_____/ 
-                                                       
- __  __     ______     __         _____                
-/\ \_\ \   /\  __ \   /\ \       /\  __-.              
-\ \  __ \  \ \ \/\ \  \ \ \____  \ \ \/\ \             
- \ \_\ \_\  \ \_____\  \ \_____\  \ \____-             
-  \/_/\/_/   \/_____/   \/_____/   \/____/             
-
-Qodeninja (c) 2025 for BashFX. MIT License.                                              
-    
-BANNER
-  printf "%s\n" "$CLR_RESET"
 
   printf "%s⚠️  CRATES.IO USAGE PLEDGE%s\n\n" "$CLR_YELLOW_B" "$CLR_RESET"
   printf "%s" "$CLR_RED_B"
@@ -141,14 +156,14 @@ BANNER
   echo "  • crates.io is for public-use libraries, tools, and applications —"
   echo "    not for one-off, undocumented code dumps."
   printf "%s\n" "$CLR_RESET"
-  printf "%sType 'I AGREE' to continue: %s" "$CLR_RED" "$CLR_RESET"
+  printf "%sType 'I AGREE' to continue: %s" "$CLR_CYAN_B" "$CLR_RESET"
   printf "%s" "$CLR_YELLOW_B"; read agree || true; printf "%s" "$CLR_RESET"
   if [ "$agree" != "I AGREE" ]; then
     echo "Aborted."
     exit 0
   fi
   # clear screen
-  printf '\033[2J\033[H'
+  clear_screen;
   printf "%sThank you for being a responsible and contributing member to the crate ecosystem.%s\n\n\n" "$CLR_GREEN_B" "$CLR_RESET"
   touch "$PLEDGE_FILE"
 elif [ "$QUIET_NOTICE" = "yes" ]; then
