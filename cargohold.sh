@@ -4,13 +4,23 @@ set -euo pipefail
 # ==================== USER DEFAULTS ==================== #
 DEFAULT_GITHUB_NAME="YourGitHubUsernameOrOrg"
 DEFAULT_SSH_IDENTITY="${SSH_IDENTITY:-github.com}"
-DEFAULT_DESC="Reserved name stub crate. No functionality is provided."
+DEFAULT_DESC="Reserved name stub crate. No functionality is provided. 
+NOTICE: If this stub is older than 1 month old and no progress has been made you are free to use it. Please flag me for transfer or contact support"
 DEFAULT_KEYWORDS="stub,reserved"
 DEFAULT_CRATE_TYPE="lib"
 DEFAULT_LICENSE="MIT OR Apache-2.0"
 DEFAULT_VERSION="0.0.1"
 PLEDGE_FILE="${HOME}/.cargohold"
 # ======================================================= #
+
+# colors
+CLR_RESET="$(printf '\033[0m')"
+CLR_CYAN_B="$(printf '\033[1;36m')"
+CLR_YELLOW_B="$(printf '\033[1;33m')"
+CLR_RED_B="$(printf '\033[1;31m')"
+CLR_RED="$(printf '\033[31m')"
+CLR_GREEN_B="$(printf '\033[1;32m')"
+CLR_WHITE_B="$(printf '\033[1;37m')"
 
 die(){ echo "ERR: $*" >&2; exit 1; }
 valid_crate_name(){
@@ -30,6 +40,10 @@ keywords_literal(){
 truncate80(){
   local s="$1"; local n=${#s}
   if [ $n -le 80 ]; then printf "%s" "$s"; else printf "%s…" "$(printf "%s" "$s" | cut -c1-80)"; fi
+}
+hr(){
+  local cols; cols=$(tput cols 2>/dev/null || echo 80)
+  printf "%s\n" "$(printf '%*s' "$cols" '' | tr ' ' '─')"
 }
 
 # --------- defaults ---------
@@ -94,23 +108,30 @@ if [ -n "$REPO_NAME" ]; then
   REMOTE_SSH="git@${SSH_ID}:${NAME}/${REPO_NAME}.git"
 fi
 
+# ----- banner + pledge (persisted; --qn bypass) -----
 if [ ! -f "$PLEDGE_FILE" ] && [ "$QUIET_NOTICE" != "yes" ]; then
-  printf "\033[1;36m"
+  printf "%s" "$CLR_CYAN_B"
   cat <<'BANNER'
-   ___ __ _ _ __ __ _  ___  
-  / __/ _` | '__/ _` |/ _ \ 
- | (_| (_| | | | (_| | (_) |
-  \___\__,_|_|  \__, |\___/ 
-  _           _ |___/       
- | |__   ___ | | __| |      
- | '_ \ / _ \| |/ _` |      
- | | | | (_) | | (_| |      
- |_| |_|\___/|_|\__,_|      
-BANNER
-  printf "\033[0m\n"
 
-  printf "\033[1;33m⚠️  CRATES.IO USAGE PLEDGE\033[0m\n"
-  echo
+ ______     ______     ______     ______     ______    
+/\  ___\   /\  __ \   /\  == \   /\  ___\   /\  __ \   
+\ \ \____  \ \  __ \  \ \  __<   \ \ \__ \  \ \ \/\ \  
+ \ \_____\  \ \_\ \_\  \ \_\ \_\  \ \_____\  \ \_____\ 
+  \/_____/   \/_/\/_/   \/_/ /_/   \/_____/   \/_____/ 
+                                                       
+ __  __     ______     __         _____                
+/\ \_\ \   /\  __ \   /\ \       /\  __-.              
+\ \  __ \  \ \ \/\ \  \ \ \____  \ \ \/\ \             
+ \ \_\ \_\  \ \_____\  \ \_____\  \ \____-             
+  \/_/\/_/   \/_____/   \/_____/   \/____/             
+
+Qodeninja (c) 2025 for BashFX. MIT License.                                              
+    
+BANNER
+  printf "%s\n" "$CLR_RESET"
+
+  printf "%s⚠️  CRATES.IO USAGE PLEDGE%s\n\n" "$CLR_YELLOW_B" "$CLR_RESET"
+  printf "%s" "$CLR_RED_B"
   echo "By continuing, you agree:"
   echo "  • Not to spam crates.io with useless or throwaway crates."
   echo "  • To commit to building your crate into a usable public project,"
@@ -119,18 +140,23 @@ BANNER
   echo "    it as a crate. Use local crates or workspaces instead."
   echo "  • crates.io is for public-use libraries, tools, and applications —"
   echo "    not for one-off, undocumented code dumps."
-  echo
-  printf "Type 'I AGREE' to continue: "
-  read agree || true
+  printf "%s\n" "$CLR_RESET"
+  printf "%sType 'I AGREE' to continue: %s" "$CLR_RED" "$CLR_RESET"
+  printf "%s" "$CLR_YELLOW_B"; read agree || true; printf "%s" "$CLR_RESET"
   if [ "$agree" != "I AGREE" ]; then
     echo "Aborted."
     exit 0
   fi
+  # clear screen
+  printf '\033[2J\033[H'
+  printf "%sThank you for being a responsible and contributing member to the crate ecosystem.%s\n\n\n" "$CLR_GREEN_B" "$CLR_RESET"
   touch "$PLEDGE_FILE"
 elif [ "$QUIET_NOTICE" = "yes" ]; then
   touch "$PLEDGE_FILE"
 fi
 
+# --------- pre-flight summary ---------
+hr
 echo "Plan:"
 printf "  Crate:        %s\n" "$CRATE_NAME"
 printf "  Directory:    %s\n" "$WORKDIR"
@@ -150,6 +176,7 @@ printf "  Homepage:     %s\n" "${HOMEPAGE:-(none)}"
 printf "  Publish:      %s\n" "$PUBLISH"
 echo
 
+# --------- confirmation ---------
 if [ "$AUTO_YES" != "yes" ]; then
   printf "Proceed with creation? [y/N]: "
   read ans || true
@@ -160,6 +187,7 @@ if [ "$AUTO_YES" != "yes" ]; then
   fi
 fi
 
+# --------- scaffold ---------
 cargo init "$WORKDIR" ${CRATE_TYPE:+--$CRATE_TYPE} >/dev/null
 cd "$WORKDIR"
 
