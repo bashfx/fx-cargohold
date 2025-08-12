@@ -1,6 +1,6 @@
 # 🛳️ cargohold : Stub a crate on crates.io
 
-**cargohold** is a small but mighty Bash script to **secure a crate name** on [crates.io](https://crates.io) before someone else grabs it.
+**cargohold** is a small but mighty Bash script to **secure a crate name** on [crates.io](https://crates.io) for that fever dream idea you just had.
 
 It creates a **minimal stub crate** with:
 - A simple `lib.rs` or `main.rs`
