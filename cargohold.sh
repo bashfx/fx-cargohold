@@ -2,10 +2,9 @@
 set -euo pipefail
 
 # ==================== USER DEFAULTS ==================== #
-DEFAULT_GITHUB_NAME="YourGitHubUsernameOrOrg"
+DEFAULT_GITHUB_NAME="Username_or_Org"
 DEFAULT_SSH_IDENTITY="${SSH_IDENTITY:-github.com}"
-DEFAULT_DESC="Reserved name stub crate. No functionality is provided. 
-NOTICE: If this stub is older than 1 month old and no progress has been made you are free to use it. Please flag me for transfer or contact support"
+DEFAULT_DESC="Reserved name stub crate. No functionality is provided. NOTICE: If this stub is older than 1 month old and no progress has been made you are free to use it. Please flag me for transfer or contact support"
 DEFAULT_KEYWORDS="stub,reserved"
 DEFAULT_CRATE_TYPE="lib"
 DEFAULT_LICENSE="MIT OR Apache-2.0"
@@ -41,9 +40,10 @@ truncate80(){
   local s="$1"; local n=${#s}
   if [ $n -le 80 ]; then printf "%s" "$s"; else printf "%s…" "$(printf "%s" "$s" | cut -c1-80)"; fi
 }
+
 hr(){
   local cols; cols=$(tput cols 2>/dev/null || echo 80)
-  printf "%s\n" "$(printf '%*s' "$cols" '' | tr ' ' '─')"
+  printf "%s\n" "$(printf '%*s' "$cols" '' | tr ' ' '-')"
 }
 
 clear_screen(){
